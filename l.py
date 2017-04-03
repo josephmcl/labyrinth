@@ -295,7 +295,6 @@ class Labyrinth:
 if __name__ == '__main__':
     s = time()
     random.seed("L-A-B-Y-R-I-N-T-H")
-    #turtle.speed(speed=0)
     l = Labyrinth(int(argv[2]), int(argv[3]))
     #l.img()
     #e = time()
