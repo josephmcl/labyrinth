@@ -3,9 +3,13 @@
 '''
 from math import acos, pi, ceil, cos, sin, radians
 import random
-from sys import argv
+from sys import argv, stdin
 from PIL import Image, ImageDraw
 from time import time
+
+
+CIN = []
+CCIN = []
 
 
 bp_1 = """
@@ -119,11 +123,14 @@ class Labyrinth:
         self.flat = [item for sublist in self.rep for item in sublist]
         # self.rep flattened
         self.ring_sizes = [len(i) for i in self.rep]
+
         self.graph = []
         #list containing unsorted edges
         self.order = []
         self.init_edges(self.rep, self.par)
         self.kruskal()
+        #print(self.rep)
+
 
     def init_cells(self, ring):
         '''    arg:        ring:int
@@ -137,6 +144,7 @@ class Labyrinth:
             self.delta = ang
         rv = [i+self.par for i in range(self.cuts)]
         self.par = self.par + self.cuts
+
         return rv
 
     def cart(self, n, translator):
@@ -224,20 +232,25 @@ class Labyrinth:
     def img(self):
         ''' draw!!
         '''
-        image = Image.new("RGB", (self.x, self.y),(0,0,0))
+        image = Image.new("RGB", (self.x//2, self.y//2),(255,255,255))
         draw = ImageDraw.Draw(image)
-        for mv in self.order:
-            (a, b) = mv
-            x1, y1 = self.cart(a,self.ring_sizes)
-            x2, y2 = self.cart(b,self.ring_sizes)
-            #print ("({},{}) --> ({},{})").format(x1, y1, x2, y2)
-            draw.line((x1+(self.x/2),y1+(self.y/2),x2+(self.x/2),y2+(self.y/2)), fill=(255,255,255), width=1)
+        for mv in CCIN:
+            x1,y1,x2,y2 = mv.split('`')
+            x1 = float(x1);
+            x2 = float(x2);
+            y1 = float(y1);
+            y2 = float(y2);
+            x1 = (x1 * 10)  - self.y//4;
+            x2 = (x2 * 10)  - self.y//4;
+            y1 = (y1 * 10)  - self.y//4;
+            y2 = (y2 * 10)  - self.y//4;
+            draw.line((x1+(self.x/2),y1+(self.y/2),x2+(self.x/2),y2+(self.y/2)), fill=(0,0,0), width=1)
 
         del draw
-        image.save('{}.png'.format(argv[1]))
+        image.save('out2.png')
         print("Total nodes:      {}".format(self.par))
         print("Dimensions:       {}x{}".format(self.x, self.y))
-        print("Created:          \"{}.png\"".format(argv[1]))
+        print("Created:          \"out2.png\"")
 
     def gif(self):
         ''' draw!!
@@ -253,14 +266,12 @@ class Labyrinth:
             draw = ImageDraw.Draw(image)
             limit = min(delta*i, len(self.order))
 
-            mv =  0
-            while mv < limit:
-                (a, b) = self.order[mv]
-                x1, y1 = self.cart(a,self.ring_sizes)
-                x2, y2 = self.cart(b,self.ring_sizes)
+            for mv in CCIN:
+                (a, b) = mv
+                (x1, y1) = self.cart(a,self.ring_sizes)
+                (x2, y2) = self.cart(b,self.ring_sizes)
                 #print ("({},{}) --> ({},{})").format(x1, y1, x2, y2)
                 draw.line(((x1/3)+(self.x/6),(y1/3)+(self.y/6),(x2/3)+(self.x/6),(y2/3)+(self.y/6)), fill=(255,255,0), width=1)
-                mv+=1
             del draw
             frames.append(image)
 
@@ -293,19 +304,10 @@ class Labyrinth:
 
 
 if __name__ == '__main__':
-    s = time()
-    random.seed("L-A-B-Y-R-I-N-T-H")
-    #turtle.speed(speed=0)
-    l = Labyrinth(int(argv[2]), int(argv[3]))
-    #l.img()
-    #e = time()
-    #print("Time Elapsed:     [{}]".format(e-s))
-    if(len(argv)>4):
-        if (argv[4] == "webgl"):
-            l.wgl()
-        elif (argv[4] == "png"):
-            l.img()
-        elif (argv[4] == "gif"):
-            l.gif()
+	CIN = stdin.read()
+	CCIN = CIN.split(',');
+	random.seed("L-A-B-Y-R-I-N-T-H")
+	l = Labyrinth(200, 200)
+	l.img()
 
 
