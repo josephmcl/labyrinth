@@ -178,6 +178,17 @@ void PrintEdges(edge * Edges, int Limit) {
 	for (i=0;i<Limit;++i)
 		printf("((%f,%f),(%f,%f))", Edges[i].A->X, Edges[i].A->Y, Edges[i].B->X, Edges[i].B->Y);
 }
+void PyPrintEdges(circular_maze * Maze) {
+	int i;
+	for(i=Maze->NumEdges-1;i>0;--i){
+		if(Maze->Selected[i]) {
+			PrintEdge(Maze->Edges[i]);
+			printf(",");
+		}
+	}
+	PrintEdge(Maze->Edges[0]);
+	return;
+}
 /*
  * Convert pseudo-polar coords to cartesian coordinates.  
  */
@@ -244,7 +255,7 @@ void InitalizeEdges(circular_maze * Maze) {
 		//printf("S: %d, %d, %d\n", Maze->Sections[i], i, k);
 		for (j=0;j<Maze->Sections[i];++j) {
 			/* set "theta" edges. (The ones that make rings.) */
-			Maze->Edges[k + j].Weight = (k + j) % THETA_WEIGHT;
+			Maze->Edges[k + j].Weight = (k-j) % THETA_WEIGHT;
 			Maze->Edges[k + j].Loc = k + j;
 			Maze->Edges[k + j].A = &Maze->Nodes[i][j];
 			Maze->Edges[k + j].B = &Maze->Nodes[i][(j+1)%Maze->Sections[i]];
@@ -263,7 +274,7 @@ void InitalizeEdges(circular_maze * Maze) {
 		k += Maze->Sections[i];
 		for (j=0;j<Maze->Sections[i];++j) {
 			/* set "radial" edges. (The ones that make spokes.)*/
-			Maze->Edges[k + j].Weight = (k + j) % THETA_WEIGHT;
+			Maze->Edges[k + j].Weight = (k+j) % THETA_WEIGHT;
 			Maze->Edges[k + j].Loc = k + j;
 			Maze->Edges[k + j].A = &Maze->Nodes[i][j];
 			Maze->Edges[k + j].B = &Maze->Nodes[i+1][j*n];
@@ -278,7 +289,7 @@ void InitalizeEdges(circular_maze * Maze) {
 	k = PriorSum(Maze->Sections, i);
 	for (j=0;j<Maze->Sections[i];++j) {
 		
-		Maze->Edges[k + j].Weight = (k + j) % THETA_WEIGHT;
+		Maze->Edges[k + j].Weight = (k-j) % THETA_WEIGHT;
 		Maze->Edges[k + j].Loc = k + j;
 		Maze->Edges[k + j].A = &Maze->Nodes[i][j];
 		Maze->Edges[k + j].B = &Maze->Nodes[i][(j+1)%Maze->Sections[i]];
@@ -363,62 +374,60 @@ void PrimMST1(circular_maze * Maze) {
 	int i, j, r, b, Friend;
 	node * Cur;
 	edge ** Items = malloc(sizeof(edge *));
-	mst_heap_t * Queues = malloc(3 * sizeof(mst_heap_t)); 
-	for (i=0;i<3;++i) {
+	mst_heap_t * Queues = malloc(4 * sizeof(mst_heap_t)); 
+	for (i=0;i<4;++i) {
 		Queues[i].Links = malloc(sizeof(mst_link_t));
 		Queues[i].Length = 0;
 		Queues[i].size = 0;
 	}
-	Cur = GetNode(Maze, 0);
-	Maze->Selected[0] = 1;
+	Cur = GetNode(Maze, Maze->_Size/2);
+	Maze->Selected[Maze->_Size/2] = 1;
 	int k = 0;	
 
 	for (i=0;i<4;++i) {
 		Friend = Cur->Friends[i];
 		if (Friend != -1 && Maze->Connected[Friend] != 1){
 			Maze->Edges[Cur->EdgeTo[i]].Out = Friend;
-			HeapEnqueue(&Queues[k], Maze->Edges[Cur->EdgeTo[i]].Weight, &Maze->Edges[Cur->EdgeTo[i]]);
+			HeapEnqueue(&Queues[i], Maze->Edges[Cur->EdgeTo[i]].Weight, &Maze->Edges[Cur->EdgeTo[i]]);
 		}
-		++k;
 	}
-	omp_set_num_threads(3);
+	omp_set_num_threads(4);
 	#pragma omp parallel for 
-	for (i=0;i<3;++i) {
-		int _j, t;
+	for (i=0;i<4;++i) {
+		int _j, t, FFriend, iter;
+		node * _Cur;
+		iter = 0;
 		while ((Items[i] = (edge *) HeadDequeue(&Queues[i])) != NULL) {
 			//PrintLinks(Queue->Head);
 			//printf("%d\n", Item->Loc);
 			Maze->Selected[Items[i]->Loc] = 1;
-			Cur = GetNode(Maze, Items[i]->Out);
+			_Cur = GetNode(Maze, Items[i]->Out);
 			//printf("Node %d w/ friends {", Queue->Head->V);
 			for (_j=0;_j<4;++_j) {
-				int FFriend = Cur->Friends[_j];
+				FFriend = _Cur->Friends[_j];
 				if (FFriend > 0) { 
 					t = Maze->Connected[FFriend];
 					if (t != 1){
 						#pragma omp critical
 						{
-						Maze->Edges[Cur->EdgeTo[_j]].Out = FFriend;
+						Maze->Edges[_Cur->EdgeTo[_j]].Out = FFriend;
 						Maze->Connected[FFriend] = 1;
-						HeapEnqueue(&Queues[i], Maze->Edges[Cur->EdgeTo[_j]].Weight, &Maze->Edges[Cur->EdgeTo[_j]]);
+						HeapEnqueue(&Queues[i], Maze->Edges[_Cur->EdgeTo[_j]].Weight, &Maze->Edges[_Cur->EdgeTo[_j]]);
 						}
 					}	
 				}
 			}
-		}	
+			++iter;
+		}
+		printf("%d iterations by thread: %d\n", iter, omp_get_thread_num());
 	}
 	free(Queues[0].Links);
 	free(Queues[1].Links);
 	//free(Queues[2].Links);
 	//free(Queues);
-	for(i=Maze->NumEdges-1;i>0;--i){
-		if(Maze->Selected[i]) {
-			PrintEdge(Maze->Edges[i]);
-			printf(",");
-		}
-	}
-	PrintEdge(Maze->Edges[0]);
-
+	
+	//PyPrintEdge(Maze);
+	
 	return;
 }
 int * PrimMSTP(circular_maze * Maze) {

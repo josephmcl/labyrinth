@@ -228,7 +228,7 @@ void InitalizeEdges(circular_maze * Maze) {
 	for (i=0;i<(Maze->Radius-1);++i) {
 		for (j=0;j<Maze->Sections[i];++j) {
 			/* set "theta" edges. (The ones that make rings.) */
-			Maze->Edges[k].Weight = rand() % THETA_WEIGHT;
+			Maze->Edges[k].Weight = (k-j) % THETA_WEIGHT;
 			Maze->Edges[k].Loc = k;
 			Maze->Edges[k].A = &Maze->Nodes[i][j];
 			Maze->Edges[k].B = &Maze->Nodes[i][(j+1)%Maze->Sections[i]];
@@ -247,7 +247,7 @@ void InitalizeEdges(circular_maze * Maze) {
 			n = 1;
 		for (j=0;j<Maze->Sections[i];++j) {
 			/* set "radial" edges. (The ones that make spokes.)*/
-			Maze->Edges[k].Weight = rand() % THETA_WEIGHT;
+			Maze->Edges[k].Weight = (k+j) % THETA_WEIGHT;
 			Maze->Edges[k].Loc = k;
 			Maze->Edges[k].A = &Maze->Nodes[i][j];
 			Maze->Edges[k].B = &Maze->Nodes[i+1][j*n];
@@ -262,7 +262,7 @@ void InitalizeEdges(circular_maze * Maze) {
 		}
 	}
 	for (j=0;j<Maze->Sections[i];++j) {
-		Maze->Edges[k].Weight = rand() % THETA_WEIGHT;
+		Maze->Edges[k].Weight = (k-j) % THETA_WEIGHT;
 		Maze->Edges[k].Loc = k;
 		Maze->Edges[k].A = &Maze->Nodes[i][j];
 		Maze->Edges[k].B = &Maze->Nodes[i][(j+1)%Maze->Sections[i]];
@@ -358,6 +358,7 @@ int * PrimMST1(circular_maze * Maze) {
 			HeapEnqueue(Queue, Maze->Edges[Cur->EdgeTo[i]].Weight, &Maze->Edges[Cur->EdgeTo[i]]);
 		}
 	}
+	int Iterations = 0;
 	while ((Item = (edge *) HeadDequeue(Queue)) != NULL) {
 		//PrintLinks(Queue->Head);
 		//printf("%d\n", Item->Loc);
@@ -374,9 +375,12 @@ int * PrimMST1(circular_maze * Maze) {
 				}
 			}
 		}
+		++Iterations;
 	}	
+	printf("%d iterations in serial\n", Iterations);
 	free(Queue->Links);
 	free(Queue);
+	/*
 	for(i=Maze->NumEdges-1;i>0;--i){
 		if(Maze->Selected[i]) {
 			PrintEdge(Maze->Edges[i]);
@@ -384,6 +388,7 @@ int * PrimMST1(circular_maze * Maze) {
 		}
 	}
 	PrintEdge(Maze->Edges[0]);
+	*/
 
 }
 
