@@ -350,7 +350,6 @@ int * PrimMST1(circular_maze * Maze) {
 	Queue->Length = 0;
 	Queue->size = 0;
 	Cur = GetNode(Maze, 0);
-	Maze->Connected[0] = 1;
 	b = rand() % 4;
 	for (i=0;i<4;++i) {
 		Friend = Cur->Friends[i];
@@ -365,7 +364,6 @@ int * PrimMST1(circular_maze * Maze) {
 		Maze->Selected[Item->Loc] = 1;
 		Cur = GetNode(Maze, Item->Out);
 		//printf("Node %d w/ friends {", Queue->Head->V);
-
 		for (i=0;i<4;++i) {
 			Friend = Cur->Friends[i];
 			if (Friend > 0) { 
@@ -408,7 +406,7 @@ int main(int argc, char** argv) {
     InitalizeEdges(&Maze);
     //PrintEdges(Maze.Edges, Maze.NumEdges);
     //PrimMST(&Maze);
-    //PrimMST1(&Maze);
+    PrimMST1(&Maze);
     /*cleanup*/
     int i;
     for (i=0;i<Maze.Radius;i++) {
