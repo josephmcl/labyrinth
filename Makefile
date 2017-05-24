@@ -6,8 +6,8 @@ CXXFLAGS=-g -O3
 
 all: serial omp
 
-serial: l.c
-	$(CC) $(CFLAGS) -o serial l.c -lm
+serial: serial.c
+	$(CC) $(CFLAGS) -o serial serial.c -lm
 
 omp:
 	$(CC) $(CFLAGS) -o omp omp.c -lm -fopenmp 
