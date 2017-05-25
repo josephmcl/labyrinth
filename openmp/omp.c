@@ -1,6 +1,6 @@
-/*l.c
+/*omp.c
  * C: Joseph Mclaughlin
- * D: Circular Maze Generator (serial) for CIS 431, University of Oregon, Spring 2017  
+ * D: Circular Maze Generator (Open MP) for CIS 431, University of Oregon, Spring 2017  
  *  
  */
 #include <stdio.h>
