@@ -191,6 +191,11 @@ void PyPrintEdges(circular_maze * Maze) {
 	PrintEdge(Maze->Edges[0]);
 	return;
 }
+void PrintInfo(double Time, long Iterations, double Dev)
+{
+	printf("%f:%ld:%f\n", Time, Iterations, Dev);
+	return;
+}
 /*
  * Convert pseudo-polar coords to cartesian coordinates.  
  */
@@ -310,10 +315,16 @@ void InitalizeEdges(circular_maze * Maze) {
 }
 
 void PrimMSTP(circular_maze * Maze) {
-	int i, Friend;
+	int i, Friend, IterArr[5];
+	long Total;
 	node * Cur;
-	edge ** Items = malloc(4 * sizeof(edge *));
-	mst_heap_t * Queues = malloc(4 * sizeof(mst_heap_t)); 
+	edge ** Items;
+	double Start, End, Dev;
+	mst_heap_t * Queues;
+	Total = 0;
+	Start = omp_get_wtime(); 
+	Items = malloc(4 * sizeof(edge *));
+	Queues = malloc(4 * sizeof(mst_heap_t)); 
 	for (i=0;i<4;++i) {
 		Queues[i].Links = malloc(sizeof(mst_link_t));
 		Queues[i].Length = 0;
@@ -328,8 +339,7 @@ void PrimMSTP(circular_maze * Maze) {
 			HeapEnqueue(&Queues[i], Maze->Edges[Cur->EdgeTo[i]].Weight, &Maze->Edges[Cur->EdgeTo[i]]);
 		}
 	}
-	omp_set_num_threads(4);
-	#pragma omp parallel for 
+	#pragma omp parallel for schedule(static,1) num_threads(4)
 	for (i=0;i<4;++i) {
 		int _j, t, FFriend, Iterations;
 		node * _Cur;
@@ -353,7 +363,12 @@ void PrimMSTP(circular_maze * Maze) {
 			}
 			++Iterations;
 		}
-		printf("%d iterations by thread: %d\n", Iterations, omp_get_thread_num());
+		#pragma omp critical
+		{	
+			IterArr[omp_get_thread_num()] = Iterations;
+			Total += Iterations;
+		}
+		/*printf("%d iterations by thread: %d\n", Iterations, omp_get_thread_num()); */
 	}
 	#pragma omp critical
 	{
@@ -364,7 +379,21 @@ void PrimMSTP(circular_maze * Maze) {
 		free(Queues);
 		free(Items);
 	}
-	/*PyPrintEdge(Maze)*/
+	End = omp_get_wtime();
+
+	for (i=0;i<4;++i) {
+		if (IterArr[i] < (Total/4))
+			IterArr[i] =  (Total/4) - IterArr[i];
+		else
+			IterArr[i] =  IterArr[i] - (Total/4);
+	}
+	Dev = 0.0f;
+	for (i=0;i<4;++i)
+		Dev += IterArr[i];
+	Dev = Dev/4.0f;
+	Dev = Dev/(Total/4);
+	PrintInfo(End - Start, Total, Dev);
+	/* PyPrintEdges(Maze); */
 	return;
 }
 

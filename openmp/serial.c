@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <math.h>
+#include <omp.h>
+
 
 #define pi 3.141592
 #define THETA_WEIGHT 5
@@ -332,7 +334,10 @@ void PrimMST1(circular_maze * Maze) {
 	int i, Friend, Iterations;
 	node * Cur;
 	edge * Item;
-	mst_heap_t * Queue = malloc(sizeof(mst_heap_t)); 
+	double Start, End;
+	mst_heap_t * Queue;
+	Start = omp_get_wtime();
+	Queue = malloc(sizeof(mst_heap_t)); 
 	Queue->Links = malloc(sizeof(mst_link_t));
 	Queue->Length = 0;
 	Queue->size = 0;
@@ -361,7 +366,8 @@ void PrimMST1(circular_maze * Maze) {
 		}
 		++Iterations;
 	}	
-	printf("%d iterations in serial\n", Iterations);
+	End = omp_get_wtime();
+	printf("%f:%d\n", End-Start, Iterations);
 	free(Queue->Links);
 	free(Queue);
 	return;

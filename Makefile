@@ -8,7 +8,7 @@ CXXFLAGS=-g -O3
 all: serial omp
 
 serial: serial.c
-	$(CC) $(CFLAGS) $(CDEBUG) -o serial serial.c -lm -fopenmp 
+	$(CC) $(CFLAGS) $(CDEBUG) -o serial serial.c -lm
 
 omp: omp.c
 	$(CC) $(CFLAGS) $(CDEBUG) -o omp omp.c -lm -fopenmp 
