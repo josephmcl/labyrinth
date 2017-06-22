@@ -1,17 +1,17 @@
 CC=cc
 ICC=icc
 CXX=icpc
-CFLAGS=-g -O3
-CDEBUG=-W -Wall -Wpedantic
+CFLAGS=
+CDEBUG=-W -Wall
 CXXFLAGS=-g -O3
 
 all: serial omp
 
 serial: serial.c
-	$(CC) $(CFLAGS) $(CDEBUG) -o serial serial.c -lm -fopenmp 
+	$(CC) -O3$(CFLAGS) $(CDEBUG) -o serial serial.c -lm -fopenmp 
 
 omp: omp.c
-	$(CC) $(CFLAGS) $(CDEBUG) -o omp omp.c -lm -fopenmp 
+	$(CC) -O0 -fno-unroll-loops  $(CDEBUG) -o omp omp.c -lm -fopenmp 
 
 clean: 
 	rm serial omp

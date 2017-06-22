@@ -152,7 +152,7 @@ void HeapEnqueue1 (mst_heap_t *h, int Priority, void * Item) {
     }
 
     h->Length += 1;
-    Links = malloc(sizeof(mst_link_t) * (h->Length * 10));
+    Links = malloc(sizeof(mst_link_t) * h->Length * 2);
     Location = 0;
     Location = h->Length;
     for (i=0;i<h->Length;++i){
@@ -174,6 +174,43 @@ void HeapEnqueue1 (mst_heap_t *h, int Priority, void * Item) {
     
     free(h->Links);
     h->Links = Links;
+    return;
+}
+void HeapEnqueue2 (mst_heap_t *h, int Priority, void * Item) {
+    int i, Location;
+    if (h->Length + 1 >= h->size) {
+        h->size = h->size * 2;
+        h->Links = realloc(h->Links, h->size * 2 * sizeof(mst_link_t));
+    }
+
+    if (h->Length == 0){ /* initial */
+    	h->Length++ ;
+    	h->Links[0].V = Priority;
+    	h->Links[0].Item = Item;
+    	return;
+    }
+	Location = 0;
+    for (i=0;i<h->Length;++i){ 
+    	if (Priority >= h->Links[i * 2].V){
+    		Location = i;
+    		break;
+    	}
+    	Location = i+1;
+    }	
+    for (i=0;i<h->Length;++i){ /* clean up */
+    	h->Links[(2 * i) + 1].V = h->Links[2 * i].V;
+    	h->Links[(2 * i) + 1].Item = h->Links[2 * i].Item;
+    }
+    for (i=Location+1;i<h->Length+1;++i){
+    	h->Links[2 * i].V = h->Links[(2 * i) - 1].V;
+    	h->Links[2 * i].Item = h->Links[(2 * i) - 1].Item;
+    }
+    i = Location;
+    h->Links[2 * i].V = Priority;
+    h->Links[2 * i].Item = Item;
+    h->Length++;
+   
+
     return;
 }
 void * HeadDequeue (mst_heap_t *h) {
@@ -209,6 +246,12 @@ void * HeadDequeue1 (mst_heap_t *h) {
 	if (h->Length == -1)
 		return NULL;
 	return h->Links[h->Length].Item;
+}
+void * HeadDequeue2 (mst_heap_t *h) {
+	h->Length -= 1;
+	if (h->Length == -1)
+		return NULL;
+	return h->Links[h->Length * 2].Item;
 }
 
 int MazeDequeue(circular_maze * Maze) {
@@ -305,7 +348,7 @@ void InitalizeEdges(circular_maze * Maze) {
 	for (i=0;i<(Maze->Radius-1);++i) {
 		for (j=0;j<Maze->Sections[i];++j) {
 			/* set "theta" edges. (The ones that make rings.) */
-			Maze->Edges[k].Weight = (k-j) % THETA_WEIGHT;
+			Maze->Edges[k].Weight = ((k-j) % THETA_WEIGHT) + 1;
 			Maze->Edges[k].Loc = k;
 			Maze->Edges[k].A = &Maze->Nodes[i][j];
 			Maze->Edges[k].B = &Maze->Nodes[i][(j+1)%Maze->Sections[i]];
@@ -322,7 +365,7 @@ void InitalizeEdges(circular_maze * Maze) {
 			n = 1;
 		for (j=0;j<Maze->Sections[i];++j) {
 			/* set "radial" edges. (The ones that make spokes.)*/
-			Maze->Edges[k].Weight = (k+j) % THETA_WEIGHT;
+			Maze->Edges[k].Weight = ((k+j) % RADIAL_WEIGHT) + 1;
 			Maze->Edges[k].Loc = k;
 			Maze->Edges[k].A = &Maze->Nodes[i][j];
 			Maze->Edges[k].B = &Maze->Nodes[i+1][j*n];
@@ -335,7 +378,7 @@ void InitalizeEdges(circular_maze * Maze) {
 		}
 	}
 	for (j=0;j<Maze->Sections[i];++j) {
-		Maze->Edges[k].Weight = (k-j) % THETA_WEIGHT;
+		Maze->Edges[k].Weight = ((k-j) % THETA_WEIGHT) + 1;
 		Maze->Edges[k].Loc = k;
 		Maze->Edges[k].A = &Maze->Nodes[i][j];
 		Maze->Edges[k].B = &Maze->Nodes[i][(j+1)%Maze->Sections[i]];
@@ -523,9 +566,54 @@ void PrimMST2(circular_maze * Maze) {
 		++Iterations;
 	}	
 	End = omp_get_wtime();
-	printf("%f:%d\n", End-Start, Iterations);
+	printf("%f,%d\n", End-Start, Iterations);
 	free(Queue->Links);
 	free(Queue);
+	return;
+}
+void PrimMST3(circular_maze * Maze) {
+	int i, Friend, Iterations;
+	node * Cur;
+	edge * Item;
+	double Start, End;
+	mst_heap_t * Queue;
+	Start = omp_get_wtime();
+	Queue = malloc(sizeof(mst_heap_t)); 
+	Queue->Links = malloc(sizeof(mst_link_t) * 2);
+	Queue->Length = 0;
+	Queue->size = 2;
+	Cur = GetNode(Maze, Maze->_Size/2);
+	for (i=0;i<4;++i) {
+		Friend = Cur->Friends[i];
+		if (Friend != -1 && Maze->Connected[Friend] != 1){
+			Maze->Edges[Cur->EdgeTo[i]].Out = Friend;
+			HeapEnqueue2(Queue, Maze->Edges[Cur->EdgeTo[i]].Weight, &Maze->Edges[Cur->EdgeTo[i]]);
+		}
+	}
+	
+	Iterations = 0;
+	while ((Item = (edge *) HeadDequeue2(Queue)) != NULL) {
+		Maze->Selected[Item->Loc] = 1;
+		Cur = GetNode(Maze, Item->Out);
+		for (i=0;i<4;++i) {
+			Friend = Cur->Friends[i];
+			if (Friend > 0) { 
+				if (Maze->Connected[Friend] != 1){
+					Maze->Edges[Cur->EdgeTo[i]].Out = Friend;
+					Maze->Connected[Friend] = 1;
+					HeapEnqueue2(Queue, Maze->Edges[Cur->EdgeTo[i]].Weight, &Maze->Edges[Cur->EdgeTo[i]]);
+				}
+			}
+		}
+		++Iterations;
+	}	
+	End = omp_get_wtime();
+	printf("%f,%d\n", End-Start, Iterations);
+	free(Queue->Links);
+	free(Queue);
+
+	//PyPrintEdges(Maze);
+
 	return;
 }
 int main(int argc, char** argv) {
@@ -545,7 +633,7 @@ int main(int argc, char** argv) {
     Maze._Size 		= 0;
     InitalizeNodes(&Maze);
     InitalizeEdges(&Maze);
-    PrimMST2(&Maze);
+    PrimMST3(&Maze);
     /*cleanup*/
     for (i=0;i<Maze.Radius;i++) {
     	free(Maze.Points[i]);
